@@ -48,6 +48,314 @@ DESCRIPTION_MAX = 700          # rasm ostidagi matn 1024 belgidan oshmasligi uch
 UPLOAD_DEBOUNCE_SECONDS = 3    # videolar ketma-ket kelishini kutish vaqti
 POSTER_CACHE_LIMIT = 200
 
+SITE_HTML = r'''<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AniWorldDub — O'zbek tilida anime</title>
+<meta name="description" content="AniWorldDub: anime katalogi. Qismni tanlang, bot uni Telegramda yuboradi.">
+<style>
+  :root {
+    --bg: #0e0b16;
+    --card: #191426;
+    --line: #2a2340;
+    --text: #f3effa;
+    --muted: #9d94b8;
+    --accent: #8b5cf6;
+    --accent2: #ec4899;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+  a { color: inherit; text-decoration: none; }
+  button { font: inherit; }
+
+  header {
+    position: sticky; top: 0; z-index: 10;
+    background: rgba(14, 11, 22, 0.9);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+  .bar {
+    max-width: 1100px; margin: 0 auto;
+    padding: 12px 16px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .logo {
+    font-weight: 800; font-size: 20px; letter-spacing: .3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; background-clip: text;
+    color: transparent; white-space: nowrap; cursor: pointer;
+  }
+  .search {
+    flex: 1; min-width: 0;
+    background: var(--card); border: 1px solid var(--line);
+    color: var(--text); border-radius: 12px;
+    padding: 10px 14px; font-size: 15px; outline: none;
+  }
+  .search:focus { border-color: var(--accent); }
+  .tg-link {
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    padding: 9px 14px; border-radius: 12px;
+    font-weight: 600; font-size: 14px; white-space: nowrap;
+  }
+
+  main { max-width: 1100px; margin: 0 auto; padding: 20px 16px 60px; }
+  h2 { font-size: 20px; margin-bottom: 16px; }
+
+  .grid {
+    display: grid; gap: 16px;
+    grid-template-columns: repeat(2, 1fr);
+  }
+  @media (min-width: 600px)  { .grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (min-width: 860px)  { .grid { grid-template-columns: repeat(4, 1fr); } }
+  @media (min-width: 1000px) { .grid { grid-template-columns: repeat(5, 1fr); } }
+
+  .card { cursor: pointer; }
+  .poster {
+    position: relative; width: 100%; aspect-ratio: 2 / 3;
+    border-radius: 14px; overflow: hidden;
+    background: linear-gradient(160deg, #2a1f4d, #3a1f46);
+    border: 1px solid var(--line);
+    transition: transform .2s, border-color .2s;
+  }
+  .card:hover .poster { transform: translateY(-4px); border-color: var(--accent); }
+  .poster img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .badge {
+    position: absolute; left: 8px; bottom: 8px;
+    background: rgba(0,0,0,.7); border-radius: 8px;
+    padding: 2px 8px; font-size: 12px; font-weight: 600;
+  }
+  .card .name {
+    margin-top: 8px; font-size: 15px; font-weight: 600;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .skeleton { animation: pulse 1.2s infinite ease-in-out; }
+  .skeleton .poster { border: none; }
+  @keyframes pulse { 50% { opacity: .5; } }
+
+  .detail { display: grid; gap: 20px; }
+  @media (min-width: 700px) { .detail { grid-template-columns: 280px 1fr; gap: 28px; } }
+  .detail .poster { max-width: 280px; margin: 0 auto; width: 100%; }
+  .detail h1 { font-size: 26px; line-height: 1.25; margin-bottom: 10px; }
+  .meta { color: var(--muted); font-size: 14px; margin-bottom: 14px; }
+  .desc { color: #d9d3ea; white-space: pre-line; margin-bottom: 24px; }
+  .eps-title { font-size: 18px; font-weight: 700; margin-bottom: 12px; }
+  .eps { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); }
+  .ep {
+    display: block; text-align: center;
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 12px 6px; font-weight: 600; font-size: 15px;
+    transition: background .15s, border-color .15s;
+  }
+  .ep:hover, .ep:active { background: var(--accent); border-color: var(--accent); }
+  .hint { color: var(--muted); font-size: 13px; margin-top: 14px; }
+
+  .back {
+    display: inline-block; margin-bottom: 16px;
+    background: var(--card); border: 1px solid var(--line);
+    color: var(--text); padding: 8px 14px; border-radius: 10px; cursor: pointer;
+  }
+  .state { text-align: center; color: var(--muted); padding: 60px 16px; }
+  .state button {
+    margin-top: 14px; background: var(--accent); color: #fff; border: 0;
+    padding: 10px 18px; border-radius: 10px; cursor: pointer; font-weight: 600;
+  }
+  footer { text-align: center; color: var(--muted); font-size: 13px; padding: 24px 16px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="bar">
+    <div class="logo" id="logo">AniWorldDub</div>
+    <input id="search" class="search" type="search" placeholder="Anime qidirish..." autocomplete="off">
+    <a class="tg-link" id="tgLink" href="#" target="_blank" rel="noopener">Bot</a>
+  </div>
+</header>
+
+<main id="app"></main>
+<footer>© AniWorldDub</footer>
+
+<script>
+  // Sayt botning o'zi bilan bir manzilda ishlaydi, shuning uchun API_BASE bo'sh.
+  const API_BASE = "";
+  const BOT_USERNAME = "AniWorldDub_Bot";
+
+  const app = document.getElementById("app");
+  const searchInput = document.getElementById("search");
+  document.getElementById("tgLink").href = "https://t.me/" + BOT_USERNAME;
+
+  let catalog = null;
+
+  function el(tag, props = {}, children = []) {
+    const node = document.createElement(tag);
+    for (const [key, value] of Object.entries(props)) {
+      if (key === "class") node.className = value;
+      else if (key === "text") node.textContent = value;
+      else if (key === "onclick") node.addEventListener("click", value);
+      else node.setAttribute(key, value);
+    }
+    for (const child of [].concat(children)) {
+      if (child) node.appendChild(child);
+    }
+    return node;
+  }
+
+  async function api(path) {
+    const response = await fetch(API_BASE + path);
+    if (!response.ok) throw new Error("HTTP " + response.status);
+    return response.json();
+  }
+
+  function posterBox(url, title, badgeText) {
+    const box = el("div", { class: "poster" });
+    if (url) {
+      const img = el("img", { src: url, alt: title, loading: "lazy" });
+      img.addEventListener("error", () => img.remove());
+      box.appendChild(img);
+    }
+    if (badgeText) box.appendChild(el("div", { class: "badge", text: badgeText }));
+    return box;
+  }
+
+  function showState(message, retry) {
+    app.replaceChildren(
+      el("div", { class: "state" }, [
+        el("p", { text: message }),
+        retry ? el("button", { text: "Qayta urinish", onclick: retry }) : null,
+      ])
+    );
+  }
+
+  function showSkeleton() {
+    const grid = el("div", { class: "grid" });
+    for (let i = 0; i < 10; i++) {
+      grid.appendChild(el("div", { class: "card skeleton" }, [
+        el("div", { class: "poster" }),
+        el("div", { class: "name", text: "\u00A0" }),
+      ]));
+    }
+    app.replaceChildren(el("h2", { text: "Anime katalogi" }), grid);
+  }
+
+  function renderCatalog() {
+    const query = searchInput.value.trim().toLowerCase();
+    const list = (catalog || []).filter(a =>
+      !query ||
+      a.title.toLowerCase().includes(query) ||
+      a.code.toLowerCase().includes(query)
+    );
+
+    if (!list.length) {
+      showState(catalog && catalog.length ? "Hech narsa topilmadi." : "Hozircha anime qo'shilmagan.");
+      return;
+    }
+
+    const grid = el("div", { class: "grid" });
+    for (const anime of list) {
+      const badge = anime.episode_count ? anime.episode_count + " qism" : "";
+      grid.appendChild(
+        el("div", {
+          class: "card",
+          onclick: () => { location.hash = "#/a/" + encodeURIComponent(anime.code); },
+        }, [
+          posterBox(anime.poster_url, anime.title, badge),
+          el("div", { class: "name", text: anime.title }),
+        ])
+      );
+    }
+    app.replaceChildren(el("h2", { text: "Anime katalogi" }), grid);
+  }
+
+  async function loadCatalog() {
+    showSkeleton();
+    try {
+      const data = await api("/api/anime");
+      catalog = data.anime;
+      renderCatalog();
+    } catch (error) {
+      showState("Ma'lumotlarni yuklab bo'lmadi. Internetni tekshiring yoki birozdan keyin urinib ko'ring.", loadCatalog);
+    }
+  }
+
+  async function showAnime(code) {
+    window.scrollTo(0, 0);
+    app.replaceChildren(el("div", { class: "state", text: "Yuklanmoqda..." }));
+    try {
+      const anime = await api("/api/anime/" + encodeURIComponent(code));
+
+      const episodes = el("div", { class: "eps" });
+      for (const ep of anime.episodes) {
+        episodes.appendChild(el("a", {
+          class: "ep",
+          href: ep.telegram_url,
+          target: "_blank",
+          rel: "noopener",
+          text: ep.number + "-qism",
+        }));
+      }
+
+      const info = el("div", {}, [
+        el("h1", { text: anime.title }),
+        el("div", { class: "meta", text: "Kod: " + anime.code + " • " + anime.episodes.length + " ta qism" }),
+        anime.description ? el("p", { class: "desc", text: anime.description }) : null,
+        el("div", { class: "eps-title", text: "Qismlar" }),
+        anime.episodes.length
+          ? episodes
+          : el("p", { class: "meta", text: "Hozircha qismlar qo'shilmagan." }),
+        anime.episodes.length
+          ? el("p", { class: "hint", text: "Qismni bossangiz, Telegram bot ochilib, videoni o'zi yuboradi." })
+          : null,
+      ]);
+
+      app.replaceChildren(
+        el("button", { class: "back", text: "← Katalog", onclick: () => { location.hash = "#/"; } }),
+        el("div", { class: "detail" }, [
+          posterBox(anime.poster_url, anime.title, ""),
+          info,
+        ])
+      );
+      document.title = anime.title + " — AniWorldDub";
+    } catch (error) {
+      showState("Anime topilmadi yoki yuklab bo'lmadi.", () => { location.hash = "#/"; });
+    }
+  }
+
+  function route() {
+    const match = location.hash.match(/^#\/a\/(.+)$/);
+    if (match) {
+      showAnime(decodeURIComponent(match[1]));
+    } else {
+      document.title = "AniWorldDub — O'zbek tilida anime";
+      if (catalog) renderCatalog(); else loadCatalog();
+    }
+  }
+
+  document.getElementById("logo").addEventListener("click", () => {
+    searchInput.value = "";
+    location.hash = "#/";
+  });
+  searchInput.addEventListener("input", () => {
+    if (location.hash.startsWith("#/a/")) location.hash = "#/";
+    else if (catalog) renderCatalog();
+  });
+  window.addEventListener("hashchange", route);
+
+  route();
+</script>
+</body>
+</html>
+'''
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
@@ -456,7 +764,16 @@ async def cors_middleware(request: web.Request, handler):
     return response
 
 
-async def api_root(request: web.Request):
+async def site_page(request: web.Request):
+    return web.Response(
+        text=SITE_HTML,
+        content_type="text/html",
+        charset="utf-8",
+        headers={"Cache-Control": "no-cache"},
+    )
+
+
+async def api_health(request: web.Request):
     return web.json_response({"status": "ok", "service": "AniWorldDub API"})
 
 
@@ -556,7 +873,8 @@ async def api_poster(request: web.Request):
 async def start_api():
     app = web.Application(middlewares=[cors_middleware])
 
-    app.router.add_get("/", api_root)
+    app.router.add_get("/", site_page)
+    app.router.add_get("/health", api_health)
     app.router.add_get("/api/anime", api_anime_list)
     app.router.add_get("/api/anime/{code}", api_anime_detail)
     app.router.add_get("/poster/{code}", api_poster)
